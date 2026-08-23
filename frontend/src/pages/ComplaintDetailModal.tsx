@@ -34,9 +34,10 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
   const getCleanPhotoUrl = (ref: string | null) => {
     if (!ref) return null;
     if (ref.startsWith('http')) return ref;
+    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
     const clean = ref.replace(/^\/+/, '');
-    if (clean.startsWith('uploads/')) return `/${clean}`;
-    return `/uploads/${clean}`;
+    const path = clean.startsWith('uploads/') ? `/${clean}` : `/uploads/${clean}`;
+    return `${apiBase}${path}`;
   };
 
   const fetchDetails = async (isInitial = false) => {
