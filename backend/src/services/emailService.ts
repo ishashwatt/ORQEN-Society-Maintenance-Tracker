@@ -53,21 +53,33 @@ export function getTransporter(): nodemailer.Transporter | null {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const emailTransporter = getTransporter();
-  if (emailTransporter && process.env.SMTP_USER) {
+  const plunkKey = process.env.PLUNK_API_KEY?.trim();
+  if (plunkKey) {
     try {
-      const senderUser = process.env.SMTP_USER.trim();
-      const info = await emailTransporter.sendMail({
-        from: `"ORQEN Society" <${senderUser}>`,
-        to: options.to.trim(),
-        subject: options.subject,
-        text: options.text,
-        html: options.html || options.text.replace(/\n/g, '<br/>'),
+      const response = await fetch('https://api.useplunk.com/v1/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${plunkKey}`,
+        },
+        body: JSON.stringify({
+          to: options.to.trim(),
+          subject: options.subject,
+          body: options.html || options.text.replace(/\n/g, '<br/>'),
+          name: 'ORQEN Society',
+        }),
       });
-      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
-      return { success: true, messageId: info.messageId };
-    } catch (smtpErr: any) {
-      console.warn('[GMAIL SMTP FAILED, TRYING REST FALLBACK]:', smtpErr.message);
+
+      if (response.ok) {
+        const data = (await response.json()) as any;
+        console.log(`[PLUNK API SUCCESS] to ${options.to} id: ${data.id || 'plunk-sent'}`);
+        return { success: true, messageId: data.id || 'plunk-sent' };
+      } else {
+        const errText = await response.text();
+        console.error('[PLUNK API ERROR]:', errText);
+      }
+    } catch (e: any) {
+      console.error('[PLUNK ERROR]:', e.message);
     }
   }
 
@@ -80,7 +92,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
         headers: {
           'api-key': brevoKey,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify({
           sender: { name: 'ORQEN Society', email: senderEmail },
@@ -132,6 +144,24 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
       }
     } catch (e: any) {
       console.warn('[RESEND ERROR]:', e.message);
+    }
+  }
+
+  const emailTransporter = getTransporter();
+  if (emailTransporter && process.env.SMTP_USER) {
+    try {
+      const senderUser = process.env.SMTP_USER.trim();
+      const info = await emailTransporter.sendMail({
+        from: `"ORQEN Society" <${senderUser}>`,
+        to: options.to.trim(),
+        subject: options.subject,
+        text: options.text,
+        html: options.html || options.text.replace(/\n/g, '<br/>'),
+      });
+      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (smtpErr: any) {
+      console.warn('[GMAIL SMTP FAILED, TRYING REST FALLBACK]:', smtpErr.message);
     }
   }
 
