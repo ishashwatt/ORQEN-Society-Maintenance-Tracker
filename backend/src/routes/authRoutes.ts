@@ -279,6 +279,24 @@ router.post('/otp/verify', async (req, res, next) => {
   }
 });
 
+router.get('/test-email', async (req, res) => {
+  const to = (req.query.to as string) || 'singhpryanshu07@gmail.com';
+  const result = await sendEmail({
+    to,
+    subject: 'ORQEN Diagnostic Test Email',
+    text: 'This is a live diagnostic test email from your ORQEN backend.',
+  });
+  res.json({
+    attempted_to: to,
+    result,
+    env_configured: {
+      has_smtp_user: !!process.env.SMTP_USER,
+      has_smtp_pass: !!process.env.SMTP_PASS,
+      has_resend_key: !!process.env.RESEND_API_KEY,
+    },
+  });
+});
+
 router.post('/forgot-password', async (req, res, next) => {
   try {
     const { email } = req.body;
