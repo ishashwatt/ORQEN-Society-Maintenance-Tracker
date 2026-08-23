@@ -12,7 +12,13 @@ import { errorHandler } from './middleware/errorHandler';
 import { startNotificationWorker } from './services/notificationWorker';
 import { startNoticeExpiryScheduler } from './services/noticeExpiryScheduler';
 
+import dns from 'dns';
+
 dotenv.config();
+
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {}
 
 export const app = express();
 const port = process.env.PORT || 5000;

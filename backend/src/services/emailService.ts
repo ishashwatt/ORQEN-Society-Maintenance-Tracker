@@ -1,7 +1,12 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import dns from 'dns';
 
 dotenv.config();
+
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {}
 
 export interface SendEmailOptions {
   to: string;
@@ -23,10 +28,11 @@ export function getTransporter(): nodemailer.Transporter | null {
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
+      family: 4,
       auth: { user, pass },
-      connectionTimeout: 3000,
-      greetingTimeout: 3000,
-      socketTimeout: 3000,
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
       tls: {
         rejectUnauthorized: false,
       },
@@ -38,14 +44,33 @@ export function getTransporter(): nodemailer.Transporter | null {
     host,
     port,
     secure: port === 465,
+    family: 4,
     auth: { user, pass },
-    connectionTimeout: 3000,
-    greetingTimeout: 3000,
-    socketTimeout: 3000,
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const emailTransporter = getTransporter();
+  if (emailTransporter && process.env.SMTP_USER) {
+    try {
+      const senderUser = process.env.SMTP_USER.trim();
+      const info = await emailTransporter.sendMail({
+        from: `"ORQEN Society" <${senderUser}>`,
+        to: options.to.trim(),
+        subject: options.subject,
+        text: options.text,
+        html: options.html || options.text.replace(/\n/g, '<br/>'),
+      });
+      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (smtpErr: any) {
+      console.warn('[GMAIL SMTP FAILED, TRYING REST FALLBACK]:', smtpErr.message);
+    }
+  }
+
   const brevoKey = process.env.BREVO_API_KEY?.trim();
   if (brevoKey) {
     try {
@@ -82,7 +107,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
   const resendApiKey = process.env.RESEND_API_KEY?.trim();
   if (resendApiKey) {
     try {
-      const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -90,7 +114,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
           Authorization: `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify({
-          from: fromAddress.includes('<') ? fromAddress : `ORQEN Society <${fromAddress}>`,
+          from: 'onboarding@resend.dev',
           to: [options.to.trim()],
           subject: options.subject,
           text: options.text,
@@ -108,24 +132,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
       }
     } catch (e: any) {
       console.warn('[RESEND ERROR]:', e.message);
-    }
-  }
-
-  const emailTransporter = getTransporter();
-  if (emailTransporter && process.env.SMTP_USER) {
-    try {
-      const senderUser = process.env.SMTP_USER.trim();
-      const info = await emailTransporter.sendMail({
-        from: `"ORQEN Society" <${senderUser}>`,
-        to: options.to.trim(),
-        subject: options.subject,
-        text: options.text,
-        html: options.html || options.text.replace(/\n/g, '<br/>'),
-      });
-      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
-      return { success: true, messageId: info.messageId };
-    } catch (smtpErr: any) {
-      console.warn('[GMAIL SMTP FAILED (Likely Port Blocked by Cloud Host)]:', smtpErr.message);
     }
   }
 
