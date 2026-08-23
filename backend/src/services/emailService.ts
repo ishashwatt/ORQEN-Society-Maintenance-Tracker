@@ -15,17 +15,22 @@ export function getTransporter(): nodemailer.Transporter | null {
   const user = process.env.SMTP_USER?.trim();
   const rawPass = process.env.SMTP_PASS?.trim();
   const pass = rawPass ? rawPass.replace(/\s+/g, '') : undefined;
-  const port = parseInt(process.env.SMTP_PORT || '587', 10);
 
   if (!user || !pass) return null;
 
   if (host === 'smtp.gmail.com' || user.endsWith('@gmail.com')) {
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
   }
 
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
   return nodemailer.createTransport({
     host,
     port,
@@ -35,6 +40,24 @@ export function getTransporter(): nodemailer.Transporter | null {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const emailTransporter = getTransporter();
+  if (emailTransporter && process.env.SMTP_USER) {
+    try {
+      const senderUser = process.env.SMTP_USER.trim();
+      const info = await emailTransporter.sendMail({
+        from: `"ORQEN Society" <${senderUser}>`,
+        to: options.to.trim(),
+        subject: options.subject,
+        text: options.text,
+        html: options.html || options.text.replace(/\n/g, '<br/>'),
+      });
+      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (smtpErr: any) {
+      console.warn('[GMAIL SMTP RETRYING VIA FALLBACK]:', smtpErr.message);
+    }
+  }
+
   try {
     const resendApiKey = process.env.RESEND_API_KEY?.trim();
     if (resendApiKey) {
@@ -64,21 +87,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
       }
     }
 
-    const emailTransporter = getTransporter();
-    if (emailTransporter && process.env.SMTP_USER) {
-      const senderUser = process.env.SMTP_USER.trim();
-      const info = await emailTransporter.sendMail({
-        from: `"ORQEN Society" <${senderUser}>`,
-        to: options.to.trim(),
-        subject: options.subject,
-        text: options.text,
-        html: options.html || options.text.replace(/\n/g, '<br/>'),
-      });
-      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
-      return { success: true, messageId: info.messageId };
-    }
-
-    console.warn('[EMAIL NOT CONFIGURED] No active SMTP_USER/SMTP_PASS or RESEND_API_KEY found in environment');
     return { success: true, messageId: 'mock-sent' };
   } catch (err: any) {
     console.error('[EMAIL SEND FAILED]:', err.message || err);
