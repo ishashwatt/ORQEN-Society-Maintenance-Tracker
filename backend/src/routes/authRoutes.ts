@@ -85,7 +85,7 @@ router.post('/register', handleDocUpload, async (req, res, next) => {
       ]
     );
 
-    const adminEmail = process.env.SMTP_USER || 'testingrequiredapp@gmail.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'testingrequiredapp@gmail.com';
     const emailData = buildResidentVerificationAdminEmail({
       name: data.name,
       flatNumber: data.flat_number,
@@ -280,18 +280,16 @@ router.post('/otp/verify', async (req, res, next) => {
 });
 
 router.get('/test-email', async (req, res) => {
-  const to = (req.query.to as string) || 'singhpryanshu07@gmail.com';
+  const to = (req.query.to as string) || 'shashwatpratapsinghh@gmail.com';
   const result = await sendEmail({
     to,
-    subject: 'ORQEN Diagnostic Test Email',
-    text: 'This is a live diagnostic test email from your ORQEN backend.',
+    subject: 'ORQEN Resend API Diagnostic Test Email',
+    text: 'This is a live diagnostic test email from your ORQEN backend via Resend API.',
   });
   res.json({
     attempted_to: to,
     result,
     env_configured: {
-      has_smtp_user: !!process.env.SMTP_USER,
-      has_smtp_pass: !!process.env.SMTP_PASS,
       has_resend_key: !!process.env.RESEND_API_KEY,
     },
   });

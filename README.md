@@ -118,7 +118,7 @@ stateDiagram-v2
 | **Frontend** | React 18, Vite, TypeScript, Vanilla CSS Design System, Custom SVG Icons |
 | **Backend** | Node.js, Express, TypeScript, Zod, JWT, bcryptjs, Multer |
 | **Database** | PostgreSQL (`pg` driver with in-memory resilient fallback) |
-| **Notifications** | Nodemailer (Gmail SMTP) & Resend API with async background queuing |
+| **Notifications** | Resend REST API (HTTPS Port 443) with async background queuing |
 | **Testing** | Vitest, Supertest |
 
 ---

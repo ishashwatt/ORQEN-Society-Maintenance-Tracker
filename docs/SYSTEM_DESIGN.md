@@ -36,7 +36,7 @@ graph TB
     subgraph QueueLayer["5. Asynchronous Delivery Worker"]
         NQ["Notifications Queue Table"]
         WORKER["Background Queue Worker (3s interval)"]
-        SMTP["Gmail SMTP / Resend API Gateway"]
+        RESEND["Resend REST API Gateway (HTTPS Port 443)"]
     end
 
     RP -->|HTTPS / REST API| AUTH
@@ -47,7 +47,7 @@ graph TB
     SM -->|Store File Reference| FS
     SM & NOTIF -->|Insert Event| NQ
     WORKER -->|Poll PENDING| NQ
-    WORKER -->|Dispatch Email| SMTP
+    WORKER -->|Dispatch Email| RESEND
 ```
 
 ---
@@ -211,7 +211,7 @@ sequenceDiagram
     participant API as Express API Gateway
     participant DB as Neon PostgreSQL
     participant Worker as Out-of-Band Queue Worker
-    participant SMTP as Gmail SMTP Server
+    participant Resend as Resend API Gateway (HTTPS)
     actor Admin as Committee Admin
 
     Resident->>FE: Fills Complaint Form + Attaches Photo Evidence
@@ -240,8 +240,8 @@ sequenceDiagram
     API-->>FE: HTTP 200 OK
 
     Worker->>DB: Poll PENDING notifications
-    Worker->>SMTP: Send Email to Resident ("Complaint #ID in Progress")
-    SMTP-->>Worker: 250 Message Accepted
+    Worker->>Resend: POST /emails ("Complaint #ID in Progress")
+    Resend-->>Worker: 200 OK (id: msg_xxx)
     Worker->>DB: UPDATE notifications SET status = 'SENT'
 ```
 
@@ -277,4 +277,4 @@ When $\text{Recurrence Count} \ge 3$, the system raises a high-visibility **Recu
 
 1. **Transactional Insertion**: Notification records are inserted as `PENDING` within the primary database transaction.
 2. **Decoupled Execution**: Dedicated background worker runs every 3 seconds to drain pending notifications.
-3. **Fault Tolerance & Exponential Retries**: Transient SMTP delivery failures increment the `attempts` counter up to 3 times before marking status `FAILED`, ensuring core operations APIs are never blocked.
+3. **Fault Tolerance & Exponential Retries**: Transient API delivery failures increment the `attempts` counter up to 3 times before marking status `FAILED`, ensuring core operations APIs are never blocked.
