@@ -274,7 +274,7 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({ activeTab 
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              <span>1. Email OTP Verified</span>
+              <span>1. Account Registered</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--amber)', fontWeight: 600 }}>

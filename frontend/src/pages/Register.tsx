@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { PasswordSuggestInput } from '../components/PasswordSuggestInput';
 import { CustomSelect, SelectOption } from '../components/CustomSelect';
 
 interface RegisterProps {
@@ -12,27 +11,27 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [capsLockActive, setCapsLockActive] = useState(false);
+
   const [flatNumber, setFlatNumber] = useState('');
   const [phone, setPhone] = useState('');
   const [occupancyType, setOccupancyType] = useState<'OWNER' | 'TENANT'>('OWNER');
   const [documentType, setDocumentType] = useState<string>('AADHAAR');
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentPreview, setDocumentPreview] = useState<string | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [emailOtp, setEmailOtp] = useState('');
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [otpLoading, setOtpLoading] = useState(false);
-
   const documentOptions: SelectOption[] = [
-    { value: 'AADHAAR', label: 'Aadhaar Card / Govt ID', sublabel: 'National photo identity' },
-    { value: 'RENT_AGREEMENT', label: 'Rent Agreement', sublabel: 'Tenancy verification document' },
-    { value: 'ELECTRICITY_BILL', label: 'Electricity / Utility Bill', sublabel: 'Active utility connection proof' },
-    { value: 'POSSESSION_LETTER', label: 'Possession Letter / Sale Deed', sublabel: 'Property allotment deed' },
-    { value: 'OTHER', label: 'Other Society Document', sublabel: 'Society-specific paperwork' },
+    { value: 'AADHAAR', label: 'Aadhaar Card / Govt ID', sublabel: 'National identity verification' },
+    { value: 'RENT_AGREEMENT', label: 'Registered Rent Agreement', sublabel: 'Tenancy contract proof' },
+    { value: 'ELECTRICITY_BILL', label: 'Electricity / Utility Bill', sublabel: 'Proof of address connection' },
+    { value: 'POSSESSION_LETTER', label: 'Possession Letter / Sale Deed', sublabel: 'Ownership allotment document' },
+    { value: 'OTHER', label: 'Other Society Document', sublabel: 'Committee-approved document' },
   ];
 
   const hasMinLength = password.length >= 8;
@@ -61,12 +60,17 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     setDocumentPreview(null);
   };
 
-  const handleInitiateRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!isPasswordValid) {
       setError('Please ensure your password meets all complexity requirements.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match. Please re-enter your password.');
       return;
     }
 
@@ -77,39 +81,6 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          phone: phone.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to dispatch verification code');
-
-      setEmailOtp('');
-      setShowOtpModal(true);
-      setOtpError(null);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleFinalSubmitWithOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setOtpError(null);
-
-    if (!emailOtp || emailOtp.length < 6) {
-      setOtpError('Please enter the 6-digit Email OTP code');
-      return;
-    }
-
-    setOtpLoading(true);
-
-    try {
       const formData = new FormData();
       formData.append('name', name.trim());
       formData.append('email', email.trim().toLowerCase());
@@ -118,7 +89,6 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       if (phone.trim()) formData.append('phone', phone.trim());
       formData.append('occupancy_type', occupancyType);
       formData.append('document_type', documentType);
-      formData.append('email_otp', emailOtp.trim());
       if (documentFile) {
         formData.append('document', documentFile);
       }
@@ -133,393 +103,342 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
         throw new Error(data.error?.message || 'Registration failed');
       }
 
-      setShowOtpModal(false);
       login(data.token, data.user);
     } catch (err: any) {
-      setOtpError(err.message);
+      setError(err.message);
     } finally {
-      setOtpLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <main className="auth-page">
       <section className="auth-panel">
-        <div className="auth-form-wrap register-wrap" style={{ maxWidth: '520px', paddingBottom: '4.5rem' }}>
+        <div className="auth-form-wrap">
           <div className="auth-brand-header">
             <span className="auth-brand-name">ORQEN</span>
             <span className="auth-brand-divider">/</span>
             <span className="auth-brand-tag">Residential Operations</span>
           </div>
-          <h1>Register resident.</h1>
+
+          <h1>Create Resident Account</h1>
           <p className="auth-intro">
-            Create your flat account with residence validation for committee approval.
+            Join your society portal to lodge maintenance requests, track resolutions, and view notices.
           </p>
 
-          {error && (
-            <div className="form-error">
-              {error}
-            </div>
-          )}
+          {error && <div className="form-error">{error}</div>}
 
-          <form data-testid="auth-register-form" onSubmit={handleInitiateRegister}>
-            <div style={{ marginBottom: '1.1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.45rem' }}>
-                Occupancy Status
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setOccupancyType('OWNER')}
-                  style={{
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '6px',
-                    border: occupancyType === 'OWNER' ? '2px solid var(--blue)' : '1px solid var(--line)',
-                    background: occupancyType === 'OWNER' ? 'rgba(30, 79, 120, 0.08)' : 'var(--surface)',
-                    color: occupancyType === 'OWNER' ? 'var(--blue)' : 'var(--muted)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.2rem',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <span>Flat Owner</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 400, color: 'var(--muted)' }}>Owns the property</span>
-                </button>
+          <form onSubmit={handleRegister} className="auth-form">
+            <label>
+              Full Name
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. John Doe"
+                autoComplete="name"
+              />
+            </label>
 
-                <button
-                  type="button"
-                  onClick={() => setOccupancyType('TENANT')}
-                  style={{
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '6px',
-                    border: occupancyType === 'TENANT' ? '2px solid var(--blue)' : '1px solid var(--line)',
-                    background: occupancyType === 'TENANT' ? 'rgba(30, 79, 120, 0.08)' : 'var(--surface)',
-                    color: occupancyType === 'TENANT' ? 'var(--blue)' : 'var(--muted)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.2rem',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <span>Tenant / Rented</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 400, color: 'var(--muted)' }}>Residing on rent</span>
-                </button>
-              </div>
-            </div>
+            <label>
+              Email Address
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="e.g. john@example.com"
+                autoComplete="email"
+              />
+            </label>
 
-            <div className="form-grid-2">
-              <label>
-                Full Name
-                <input
-                  data-testid="auth-name-input"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Sunil Verma"
-                />
-              </label>
-
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <label>
                 Flat Number
                 <input
-                  data-testid="auth-flat-input"
                   type="text"
                   required
                   value={flatNumber}
                   onChange={(e) => setFlatNumber(e.target.value)}
-                  placeholder="e.g. C-402"
-                />
-              </label>
-            </div>
-
-            <div className="form-grid-2">
-              <label>
-                Email Address
-                <input
-                  data-testid="auth-email-input"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="yourname@domain.com"
+                  placeholder="e.g. A-402"
                 />
               </label>
 
               <label>
-                Contact Phone Number
+                Contact Phone
                 <input
                   type="tel"
-                  required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
+                  placeholder="e.g. +91 98765 43210"
                 />
               </label>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <PasswordSuggestInput
-                label="Password"
-                dataTestId="auth-password-input"
-                value={password}
-                onChange={setPassword}
-                onKeyDown={handleKeyActivity}
-                onKeyUp={handleKeyActivity}
-                placeholder="••••••••"
-              />
-
-              <p style={{ fontSize: '0.74rem', color: isPasswordValid ? 'var(--green)' : 'var(--muted)', marginTop: '0.35rem', lineHeight: 1.4 }}>
-                {isPasswordValid
-                  ? '✓ Password criteria met'
-                  : 'Use at least 8 characters, including 1 number and 1 special character'}
-              </p>
-
-              {capsLockActive && (
-                <span style={{ fontSize: '0.72rem', color: 'var(--amber)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  ⇪ Caps Lock is ON
-                </span>
-              )}
-            </div>
-
-            <div style={{ background: 'rgba(30, 79, 120, 0.04)', border: '1px solid var(--line)', borderRadius: '6px', padding: '1rem', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)' }}>
-                  Residence Verification Document (Optional)
-                </span>
-                <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Govt ID / Agreement</span>
-              </div>
-
-              <div style={{ marginBottom: '0.75rem' }}>
-                <CustomSelect
-                  options={documentOptions}
-                  value={documentType}
-                  onChange={setDocumentType}
-                  placeholder="Select Document Type"
-                />
-              </div>
-
-              {!documentFile ? (
-                <label
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <span className="input-label" style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>
+                Occupancy Status
+              </span>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setOccupancyType('OWNER')}
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0.85rem',
-                    border: '1px dashed var(--line)',
-                    borderRadius: '6px',
+                    flex: 1,
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    border: occupancyType === 'OWNER' ? '2px solid var(--blue)' : '1px solid var(--border)',
+                    background: occupancyType === 'OWNER' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-card)',
+                    color: occupancyType === 'OWNER' ? 'var(--blue)' : 'var(--text-muted)',
+                    fontWeight: occupancyType === 'OWNER' ? 700 : 500,
                     cursor: 'pointer',
-                    background: 'var(--surface)',
-                    gap: '0.35rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--muted)',
+                    transition: 'all 0.15s ease',
                   }}
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--blue)' }}>
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  <span>Attach Document Photo or PDF (Max 10MB)</span>
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  Flat Owner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOccupancyType('TENANT')}
+                  style={{
+                    flex: 1,
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    border: occupancyType === 'TENANT' ? '2px solid var(--blue)' : '1px solid var(--border)',
+                    background: occupancyType === 'TENANT' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-card)',
+                    color: occupancyType === 'TENANT' ? 'var(--blue)' : 'var(--text-muted)',
+                    fontWeight: occupancyType === 'TENANT' ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Tenant / Renter
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <span className="input-label" style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>
+                Verification Document Type
+              </span>
+              <CustomSelect
+                options={documentOptions}
+                value={documentType}
+                onChange={(val) => setDocumentType(val)}
+                placeholder="Select Verification Document"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <span className="input-label" style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>
+                Upload Proof Document (PDF, PNG, JPG &bull; Optional now, can upload later)
+              </span>
+              <div
+                style={{
+                  border: '2px dashed var(--border)',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  background: 'var(--bg-card)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                }}
+              >
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleFileChange}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'pointer',
+                  }}
+                />
+                {documentFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                     {documentPreview ? (
-                      <img src={documentPreview} alt="Doc preview" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <img
+                        src={documentPreview}
+                        alt="Document Preview"
+                        style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }}
+                      />
                     ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--blue)' }}>
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                      </svg>
+                      <span style={{ fontSize: '1.5rem' }}>📄</span>
                     )}
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)' }}>{documentFile.name}</span>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>{documentFile.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {(documentFile.size / 1024 / 1024).toFixed(2)} MB &bull; Ready to submit
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveFile();
+                      }}
+                      style={{
+                        marginLeft: 'auto',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--red)',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '1rem',
+                      }}
+                      title="Remove file"
+                    >
+                      &times;
+                    </button>
                   </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--blue)' }}>
+                      Click or drag to attach proof file
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      Aadhaar, Rental Agreement, or Possession Letter (Max 10MB)
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <label>
+                Password
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={handleKeyActivity}
+                    onKeyUp={handleKeyActivity}
+                    placeholder="Min. 8 chars"
+                    autoComplete="new-password"
+                    style={{ paddingRight: '2.5rem' }}
+                  />
                   <button
                     type="button"
-                    onClick={handleRemoveFile}
-                    style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '0.6rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                    }}
                   >
-                    Remove
+                    {showPassword ? 'Hide' : 'Show'}
                   </button>
+                </div>
+              </label>
+
+              <label>
+                Confirm Password
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={handleKeyActivity}
+                    onKeyUp={handleKeyActivity}
+                    placeholder="Repeat password"
+                    autoComplete="new-password"
+                    style={{ paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '0.6rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    {showConfirmPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </label>
+            </div>
+
+            {capsLockActive && (
+              <div style={{ fontSize: '0.75rem', color: '#b45309', background: '#fef3c7', padding: '0.4rem 0.6rem', borderRadius: '4px', marginTop: '0.4rem' }}>
+                Warning: Caps Lock is ON
+              </div>
+            )}
+
+            <div style={{ marginTop: '0.5rem', marginBottom: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <div style={{ color: hasMinLength ? '#16a34a' : 'inherit' }}>
+                {hasMinLength ? '✓' : '•'} At least 8 characters
+              </div>
+              <div style={{ color: hasNumber ? '#16a34a' : 'inherit' }}>
+                {hasNumber ? '✓' : '•'} Contains at least one number
+              </div>
+              <div style={{ color: hasSpecial ? '#16a34a' : 'inherit' }}>
+                {hasSpecial ? '✓' : '•'} Contains at least one special character (@, #, $, etc.)
+              </div>
+              {confirmPassword && (
+                <div style={{ color: password === confirmPassword ? '#16a34a' : '#dc2626', marginTop: '0.2rem', fontWeight: 600 }}>
+                  {password === confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
                 </div>
               )}
             </div>
 
-            <button className="button primary" data-testid="auth-submit-button" disabled={isSubmitting} style={{ width: '100%', marginTop: '0.25rem' }}>
-              {isSubmitting ? 'Sending Verification Code...' : 'Verify Email to Register'}
+            <button type="submit" className="button primary full-width" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating Account...' : 'Complete Registration'}
             </button>
           </form>
 
-          <button
-            className="text-button"
-            data-testid="auth-mode-toggle"
-            onClick={onSwitchToLogin}
-            style={{ marginTop: '0.5rem' }}
-          >
-            Already registered? Sign In
-          </button>
+          <footer className="auth-footer">
+            <span>Already have an account?</span>
+            <button type="button" className="link-button" onClick={onSwitchToLogin}>
+              Log in
+            </button>
+          </footer>
         </div>
       </section>
 
       <aside className="auth-aside">
-        <h2>GET THINGS TAKEN CARE OF.</h2>
-        <div className="aside-rule"></div>
-        <p>
-          Raise requests, stay updated, and spend less time following up.
-        </p>
-      </aside>
-
-      {showOtpModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--card-bg, #ffffff)',
-              border: '1px solid var(--line)',
-              borderRadius: '8px',
-              padding: '1.75rem',
-              maxWidth: '460px',
-              width: '100%',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>
-                  Email OTP Verification
-                </h2>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--muted)' }}>
-                  Verification code dispatched to <strong style={{ color: 'var(--ink)' }}>{email}</strong>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOtpModal(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--muted)' }}
-              >
-                ✕
-              </button>
+        <div className="auth-aside-content">
+          <div className="society-tag">RESIDENTIAL OPERATIONS PORTAL</div>
+          <h2>Smart Infrastructure &amp; Maintenance Tracking</h2>
+          <p>
+            Seamless ticket lodging, real-time SLA enforcement, transparent noticeboards, and direct communication with your society management committee.
+          </p>
+          <div className="society-stats">
+            <div>
+              <div className="stat-value">24/7</div>
+              <div className="stat-label">Support Dispatch</div>
             </div>
-
-            {otpError && (
-              <div className="form-error" style={{ marginBottom: '1rem' }}>
-                {otpError}
-              </div>
-            )}
-
-            <div
-              style={{
-                background: 'rgba(37, 99, 235, 0.05)',
-                border: '1px solid rgba(37, 99, 235, 0.15)',
-                borderRadius: '6px',
-                padding: '0.65rem 0.85rem',
-                marginBottom: '1rem',
-                fontSize: '0.8rem',
-                color: 'var(--blue)',
-                lineHeight: 1.4,
-              }}
-            >
-              A 6-digit verification code was sent to <strong>{email}</strong>.
-              <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#64748b' }}>
-                Evaluator Sandbox: If testing with an external domain, enter code <strong>999999</strong>.
-              </div>
+            <div>
+              <div className="stat-value">98.4%</div>
+              <div className="stat-label">SLA Compliance</div>
             </div>
-
-            <form onSubmit={handleFinalSubmitWithOtp} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-              <label>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Email Confirmation Code (6 Digits)</span>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const text = await navigator.clipboard.readText();
-                        const clean = text.replace(/[^0-9]/g, '').slice(0, 6);
-                        if (clean) setEmailOtp(clean);
-                      } catch (e) {}
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--blue)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      padding: '0 4px',
-                      textDecoration: 'underline',
-                    }}
-                  >
-                    Paste from Clipboard
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  value={emailOtp}
-                  onChange={(e) => setEmailOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="123456"
-                  style={{ marginTop: '0.35rem', letterSpacing: '0.2em', fontWeight: 700 }}
-                />
-              </label>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={() => setShowOtpModal(false)}
-                  disabled={otpLoading}
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="button primary"
-                  disabled={otpLoading}
-                >
-                  {otpLoading ? 'Verifying...' : 'Confirm & Complete Registration'}
-                </button>
-              </div>
-            </form>
+            <div>
+              <div className="stat-value">&lt; 4h</div>
+              <div className="stat-label">Avg. Response Time</div>
+            </div>
           </div>
         </div>
-      )}
+      </aside>
     </main>
   );
 };

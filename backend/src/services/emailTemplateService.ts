@@ -91,61 +91,6 @@ function getBaseLayout(title: string, subheader: string, contentHtml: string, ac
 `;
 }
 
-export function buildOtpEmail(code: string, purpose: string, expiresInMinutes = 10): { subject: string; text: string; html: string } {
-  const subject = `${BRAND_NAME} Verification Code: ${code}`;
-  const text = `Your ${BRAND_NAME} ${purpose} verification code is: ${code}\n\nThis code will expire in ${expiresInMinutes} minutes.\n\nAccess portal: ${process.env.FRONTEND_URL || DEFAULT_PORTAL_URL}`;
-  
-  const digits = code.split('');
-  const digitBoxes = digits.map(d => `
-    <td align="center" style="width: 44px; height: 52px; background: #ffffff; border: 2px solid #0284c7; border-radius: 8px; font-family: monospace; font-size: 26px; font-weight: 800; color: #0369a1; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.15);">
-      ${d}
-    </td>
-  `).join('<td style="width: 6px;"></td>');
-
-  const content = `
-    <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 16px;">
-      Hello,
-    </p>
-    <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px;">
-      You recently requested a security verification code for <strong>${purpose}</strong> on the ORQEN Society Maintenance Portal. Please enter this code to proceed:
-    </p>
-
-    <!-- Stylized OTP Card -->
-    <div style="background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 12px; padding: 24px 16px; margin: 20px 0; text-align: center;">
-      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #0284c7; margin-bottom: 14px;">
-        One-Time Passcode
-      </div>
-      <table align="center" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
-        <tr>
-          ${digitBoxes}
-        </tr>
-      </table>
-      
-      <!-- Quick Copy Code Block -->
-      <div style="margin-top: 18px;">
-        <div style="display: inline-block; background-color: #ffffff; border: 1px dashed #0284c7; border-radius: 8px; padding: 8px 18px;">
-          <span style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;">Direct Copy Code:</span>
-          <span style="font-family: monospace; font-size: 20px; font-weight: 800; letter-spacing: 4px; color: #0369a1; user-select: all; -webkit-user-select: all; -moz-user-select: all; cursor: pointer;">${code}</span>
-        </div>
-      </div>
-
-      <div style="margin-top: 12px; font-size: 12px; color: #0369a1; font-weight: 600;">
-        Valid for the next ${expiresInMinutes} minutes &bull; Single use only
-      </div>
-    </div>
-
-    <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
-      If you did not make this request, you can safely ignore this email. Your account remains secure.
-    </p>
-  `;
-
-  return {
-    subject,
-    text,
-    html: getBaseLayout('Security Verification Code', `Action Required: ${purpose}`, content, 'Open ORQEN Portal'),
-  };
-}
-
 export function buildResidentVerificationAdminEmail(params: {
   name: string;
   flatNumber: string;

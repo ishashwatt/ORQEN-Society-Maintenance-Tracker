@@ -9,8 +9,7 @@ import { authenticate, requireRole, AuthenticatedRequest } from '../middleware/a
 
 import { uploadPhoto, deleteFileIfExists } from '../services/photoStorage';
 import { sendEmail } from '../services/emailService';
-import { sendSms } from '../services/smsService';
-import { buildOtpEmail, buildResidentVerificationAdminEmail } from '../services/emailTemplateService';
+import { buildResidentVerificationAdminEmail } from '../services/emailTemplateService';
 
 const router = Router();
 
@@ -229,141 +228,6 @@ const GoogleAuthSchema = z.object({
   google_id: z.string().optional(),
 });
 
-router.post('/otp/send', async (req, res, next) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      throw new AppError(400, 'EMAIL_REQUIRED', 'Email address is required');
-    }
-
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    inMemStore.otpTokens.set(email.toLowerCase().trim(), { code: emailOtp, expires_at: expiresAt });
-    
-    const emailData = buildOtpEmail(emailOtp, 'Registration');
-    sendEmail({
-      to: email.toLowerCase().trim(),
-      subject: emailData.subject,
-      text: emailData.text,
-      html: emailData.html,
-    }).catch(() => {});
-
-    res.json({
-      success: true,
-      message: 'Verification code sent to your email',
-      expires_in_seconds: 600,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/otp/verify', async (req, res, next) => {
-  try {
-    const { identifier, code } = req.body;
-    if (!identifier || !code) {
-      throw new AppError(400, 'INVALID_INPUT', 'Email identifier and OTP code are required');
-    }
-
-    const clean = identifier.toLowerCase().trim();
-    const tokenRecord = inMemStore.otpTokens.get(clean);
-
-    const isMasterSandboxCode = code.trim() === '999999' || code.trim() === '123456';
-    const isValidToken = tokenRecord && new Date() <= tokenRecord.expires_at && tokenRecord.code === code.trim();
-
-    if (!isValidToken && !isMasterSandboxCode) {
-      throw new AppError(400, 'INVALID_OTP', 'The verification code entered is invalid or has expired');
-    }
-
-    res.json({ success: true, verified: true });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/test-email', async (req, res) => {
-  const to = (req.query.to as string) || 'shashwatpratapsinghh@gmail.com';
-  const result = await sendEmail({
-    to,
-    subject: 'ORQEN Resend API Diagnostic Test Email',
-    text: 'This is a live diagnostic test email from your ORQEN backend via Resend API.',
-  });
-  res.json({
-    attempted_to: to,
-    result,
-    env_configured: {
-      has_resend_key: !!process.env.RESEND_API_KEY,
-    },
-  });
-});
-
-router.post('/forgot-password', async (req, res, next) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      throw new AppError(400, 'EMAIL_REQUIRED', 'Email address is required');
-    }
-
-    const cleanEmail = email.toLowerCase().trim();
-    const userRes = await query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
-    if (userRes.rowCount === 0) {
-      throw new AppError(404, 'USER_NOT_FOUND', 'No registered account found with this email address');
-    }
-
-    const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    inMemStore.resetTokens.set(cleanEmail, { code: resetOtp, expires_at: expiresAt });
-
-    const emailData = buildOtpEmail(resetOtp, 'Password Reset');
-    sendEmail({
-      to: cleanEmail,
-      subject: emailData.subject,
-      text: emailData.text,
-      html: emailData.html,
-    }).catch(() => {});
-
-    res.json({
-      success: true,
-      message: 'Password reset OTP sent to registered email',
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/reset-password', async (req, res, next) => {
-  try {
-    const { email, otp, new_password } = req.body;
-    if (!email || !otp || !new_password) {
-      throw new AppError(400, 'MISSING_FIELDS', 'Email, OTP code, and new password are required');
-    }
-
-    if (new_password.length < 8) {
-      throw new AppError(400, 'WEAK_PASSWORD', 'Password must be at least 8 characters long');
-    }
-
-    const cleanEmail = email.toLowerCase().trim();
-    const resetRecord = inMemStore.resetTokens.get(cleanEmail);
-    const isMasterSandboxCode = otp.trim() === '999999' || otp.trim() === '123456';
-    const isValidReset = resetRecord && new Date() <= resetRecord.expires_at && resetRecord.code === otp.trim();
-
-    if (!isValidReset && !isMasterSandboxCode) {
-      throw new AppError(400, 'INVALID_OTP', 'Invalid or expired password reset verification code');
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(new_password, salt);
-
-    await query('UPDATE users SET password_hash = $1 WHERE email = $2', [passwordHash, cleanEmail]);
-    inMemStore.resetTokens.delete(cleanEmail);
-
-    res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
-  } catch (err) {
-    next(err);
-  }
-});
-
 router.post('/google', async (req, res, next) => {
   try {
     const data = GoogleAuthSchema.parse(req.body);
@@ -419,17 +283,9 @@ router.post('/google/complete-onboarding', uploadPhoto.single('document'), async
       uploadedFilePath = req.file.path.replace(/\\/g, '/');
     }
 
-    const { email, name, flat_number, phone, occupancy_type, document_type, phone_otp } = req.body;
-    if (!email || !flat_number || !phone) {
-      throw new AppError(400, 'MISSING_FIELDS', 'Email, flat number, and phone number are required');
-    }
-
-    if (phone_otp) {
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const tokenRecord = inMemStore.otpTokens.get(cleanPhone);
-      if (!tokenRecord || new Date() > tokenRecord.expires_at || tokenRecord.code !== phone_otp.trim()) {
-        throw new AppError(400, 'INVALID_PHONE_OTP', 'Invalid or expired phone verification code');
-      }
+    const { email, name, flat_number, phone, occupancy_type, document_type } = req.body;
+    if (!email || !flat_number) {
+      throw new AppError(400, 'MISSING_FIELDS', 'Email and flat number are required');
     }
 
     const cleanEmail = email.toLowerCase().trim();

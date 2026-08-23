@@ -14,16 +14,6 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState<1 | 2>(1);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotOtp, setForgotOtp] = useState('');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
-  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
-  const [forgotError, setForgotError] = useState<string | null>(null);
-  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
-  const [forgotLoading, setForgotLoading] = useState(false);
-
   const handleKeyActivity = (e: React.KeyboardEvent) => {
     setCapsLockActive(e.getModifierState('CapsLock'));
   };
@@ -53,76 +43,6 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
       setError(err.message);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleSendForgotOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotError(null);
-    setForgotSuccess(null);
-    if (!forgotEmail) {
-      setForgotError('Please enter your registered email address');
-      return;
-    }
-    setForgotLoading(true);
-    try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Password reset request failed');
-      setForgotStep(2);
-    } catch (err: any) {
-      setForgotError(err.message);
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotError(null);
-    setForgotSuccess(null);
-
-    if (forgotNewPassword !== forgotConfirmPassword) {
-      setForgotError('New passwords do not match');
-      return;
-    }
-
-    if (forgotNewPassword.length < 8) {
-      setForgotError('Password must be at least 8 characters long');
-      return;
-    }
-
-    setForgotLoading(true);
-    try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: forgotEmail,
-          otp: forgotOtp,
-          new_password: forgotNewPassword,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Password reset failed');
-
-      setForgotSuccess('Password reset successfully. You can now log in.');
-      setEmail(forgotEmail);
-      setTimeout(() => {
-        setShowForgotModal(false);
-        setForgotStep(1);
-        setForgotOtp('');
-        setForgotNewPassword('');
-        setForgotConfirmPassword('');
-      }, 1500);
-    } catch (err: any) {
-      setForgotError(err.message);
-    } finally {
-      setForgotLoading(false);
     }
   };
 
@@ -163,30 +83,9 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
               />
             </label>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-              <label style={{ margin: 0 }}>Password</label>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForgotModal(true);
-                  setForgotStep(1);
-                  setForgotEmail(email || '');
-                  setForgotError(null);
-                  setForgotSuccess(null);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--blue)',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                Forgot password?
-              </button>
-            </div>
+            <label style={{ marginTop: '0.75rem' }}>
+              Password
+            </label>
 
             <div className="password-field-wrap">
               <input
@@ -229,7 +128,7 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
               </span>
             )}
 
-            <button className="button primary" data-testid="auth-submit-button" disabled={isSubmitting} style={{ width: '100%', marginTop: '0.85rem' }}>
+            <button className="button primary" data-testid="auth-submit-button" disabled={isSubmitting} style={{ width: '100%', marginTop: '1.25rem' }}>
               {isSubmitting ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
@@ -238,7 +137,7 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
             className="text-button"
             data-testid="auth-mode-toggle"
             onClick={onSwitchToRegister}
-            style={{ marginTop: '0.5rem' }}
+            style={{ marginTop: '0.75rem' }}
           >
             New resident? Create an account
           </button>
@@ -252,172 +151,6 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
           Report an issue, follow its progress, and know when it's resolved.
         </p>
       </aside>
-
-      {showForgotModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--card-bg, #ffffff)',
-              border: '1px solid var(--line)',
-              borderRadius: '8px',
-              padding: '1.75rem',
-              maxWidth: '440px',
-              width: '100%',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>
-                  Reset Password
-                </h2>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--muted)' }}>
-                  {forgotStep === 1 ? 'Enter your registered email to receive an OTP code.' : 'Enter the OTP code and choose a new password.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--muted)' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {forgotError && (
-              <div className="form-error" style={{ marginBottom: '1rem' }}>
-                {forgotError}
-              </div>
-            )}
-
-            {forgotSuccess && (
-              <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid var(--green)', color: 'var(--green)', padding: '0.65rem 0.85rem', borderRadius: '6px', fontSize: '0.82rem', marginBottom: '1rem', fontWeight: 600 }}>
-                {forgotSuccess}
-              </div>
-            )}
-
-            {forgotStep === 1 ? (
-              <form onSubmit={handleSendForgotOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <label>
-                  Registered Email Address
-                  <input
-                    type="email"
-                    required
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="e.g. rahul@resident.com"
-                    style={{ marginTop: '0.35rem' }}
-                  />
-                </label>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => setShowForgotModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="button primary"
-                    disabled={forgotLoading}
-                  >
-                    {forgotLoading ? 'Sending OTP...' : 'Send Reset Code'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div
-                  style={{
-                    background: 'rgba(37, 99, 235, 0.05)',
-                    border: '1px solid rgba(37, 99, 235, 0.15)',
-                    borderRadius: '6px',
-                    padding: '0.65rem 0.85rem',
-                    fontSize: '0.8rem',
-                    color: 'var(--blue)',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  Enter the 6-digit reset code sent to <strong>{forgotEmail}</strong> and your new password.
-                </div>
-
-                <label>
-                  6-Digit OTP Code
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={forgotOtp}
-                    onChange={(e) => setForgotOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="123456"
-                    style={{ marginTop: '0.35rem', letterSpacing: '0.2em', fontWeight: 700 }}
-                  />
-                </label>
-
-                <label>
-                  New Password (min 8 characters)
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={forgotNewPassword}
-                    onChange={(e) => setForgotNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    style={{ marginTop: '0.35rem' }}
-                  />
-                </label>
-
-                <label>
-                  Confirm New Password
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={forgotConfirmPassword}
-                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    style={{ marginTop: '0.35rem' }}
-                  />
-                </label>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => setForgotStep(1)}
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    className="button primary"
-                    disabled={forgotLoading}
-                  >
-                    {forgotLoading ? 'Updating...' : 'Update Password'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </main>
   );
 };

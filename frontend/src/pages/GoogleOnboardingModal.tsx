@@ -18,9 +18,6 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
   const { login } = useAuth();
   const [flatNumber, setFlatNumber] = useState('');
   const [phone, setPhone] = useState('');
-  const [phoneOtp, setPhoneOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
   const [occupancyType, setOccupancyType] = useState<'OWNER' | 'TENANT'>('OWNER');
   const [documentType, setDocumentType] = useState<string>('AADHAAR');
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -35,29 +32,6 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
     { value: 'POSSESSION_LETTER', label: 'Possession Letter / Sale Deed', sublabel: 'Property allotment deed' },
     { value: 'OTHER', label: 'Other Society Document', sublabel: 'Society-specific paperwork' },
   ];
-
-  const handleSendPhoneOtp = async () => {
-    if (!phone || phone.length < 10) {
-      setError('Please enter a valid 10-digit phone number');
-      return;
-    }
-    setSendingOtp(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to send OTP');
-      setOtpSent(true);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setSendingOtp(false);
-    }
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -85,16 +59,6 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
       return;
     }
 
-    if (!phone.trim()) {
-      setError('Phone number is required');
-      return;
-    }
-
-    if (!phoneOtp || phoneOtp.length < 6) {
-      setError('Please enter the 6-digit phone verification OTP');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -103,8 +67,7 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
       formData.append('name', initialName.trim());
       if (googleId) formData.append('google_id', googleId);
       formData.append('flat_number', flatNumber.trim());
-      formData.append('phone', phone.trim());
-      formData.append('phone_otp', phoneOtp.trim());
+      if (phone.trim()) formData.append('phone', phone.trim());
       formData.append('occupancy_type', occupancyType);
       formData.append('document_type', documentType);
       if (documentFile) {
@@ -118,7 +81,7 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error?.message || 'Onboarding failed');
+        throw new Error(data.error?.message || 'Failed to complete profile onboarding');
       }
 
       login(data.token, data.user);
@@ -138,37 +101,49 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(4px)',
+        background: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 9999,
-        padding: '1.25rem',
+        padding: '1rem',
       }}
     >
       <div
         style={{
-          background: 'var(--card-bg, #ffffff)',
-          border: '1px solid var(--line)',
-          borderRadius: '8px',
-          padding: '1.75rem 2rem',
-          maxWidth: '540px',
+          background: 'var(--surface)',
+          borderRadius: '12px',
+          maxWidth: '520px',
           width: '100%',
-          maxHeight: '90vh',
+          maxHeight: '92vh',
           overflowY: 'auto',
-          scrollbarWidth: 'thin',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+          border: '1px solid var(--line)',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            borderBottom: '1px solid var(--line)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>
-              Complete Resident Onboarding
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', color: 'var(--blue)', textTransform: 'uppercase' }}>
+                ORQEN Society
+              </span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.7rem' }}>/</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Resident Setup</span>
+            </div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>
+              Complete Resident Profile
             </h2>
-            <p style={{ margin: '0.3rem 0 0', fontSize: '0.82rem', color: 'var(--muted)' }}>
-              Google Verified Account: <strong style={{ color: 'var(--ink)' }}>{initialEmail}</strong>
-            </p>
           </div>
           <button
             type="button"
@@ -176,27 +151,31 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
             style={{
               background: 'none',
               border: 'none',
-              fontSize: '1.25rem',
-              cursor: 'pointer',
+              fontSize: '1.4rem',
               color: 'var(--muted)',
-              padding: '0.25rem',
-              lineHeight: 1,
+              cursor: 'pointer',
+              padding: '0.2rem 0.5rem',
             }}
           >
-            ✕
+            &times;
           </button>
         </div>
 
-        {error && (
-          <div className="form-error" style={{ marginBottom: '1.1rem' }}>
-            {error}
-          </div>
-        )}
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {error && (
+            <div className="form-error">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+          <div style={{ background: 'var(--subtle)', padding: '0.75rem 1rem', borderRadius: '6px', border: '1px solid var(--line)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Google Account</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink)' }}>{initialName} ({initialEmail})</div>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
-              <span>Assigned Flat / Unit Number</span>
+              <span>Flat Number</span>
               <span style={{ color: 'var(--red)', fontWeight: 700 }}>*</span>
             </label>
             <input
@@ -253,83 +232,16 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
-              <span>Contact Phone Number</span>
-              <span style={{ color: 'var(--red)', fontWeight: 700 }}>*</span>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
+              Contact Phone Number (Optional)
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 9876543210"
-                style={{ flex: 1, padding: '0.65rem 0.85rem' }}
-              />
-              <button
-                type="button"
-                onClick={handleSendPhoneOtp}
-                disabled={sendingOtp}
-                className="button secondary"
-                style={{ padding: '0 1rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
-              >
-                {sendingOtp ? 'Sending...' : otpSent ? 'Resend OTP' : 'Send OTP'}
-              </button>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(37, 99, 235, 0.05)',
-                border: '1px solid rgba(37, 99, 235, 0.15)',
-                borderRadius: '6px',
-                padding: '0.6rem 0.85rem',
-                marginTop: '0.35rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: '0.78rem',
-              }}
-            >
-              <div>
-                <span style={{ color: 'var(--muted)' }}>Demo Master OTP: </span>
-                <strong style={{ color: 'var(--blue)' }}>123456</strong>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setPhoneOtp('123456');
-                  setOtpSent(true);
-                }}
-                style={{
-                  background: 'var(--blue)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '0.25rem 0.6rem',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Autofill OTP (123456)
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
-                <span>Enter 6-Digit Phone OTP</span>
-                <span style={{ color: 'var(--red)', fontWeight: 700 }}>*</span>
-              </label>
-              <input
-                type="text"
-                required
-                maxLength={6}
-                value={phoneOtp}
-                onChange={(e) => setPhoneOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="123456"
-                style={{ width: '100%', letterSpacing: '0.25em', fontWeight: 700, padding: '0.65rem 0.85rem' }}
-              />
-            </div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. +91 98765 43210"
+              style={{ width: '100%', padding: '0.65rem 0.85rem' }}
+            />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
@@ -350,23 +262,26 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '0.85rem',
-                    border: '1px dashed var(--line)',
-                    borderRadius: '6px',
+                    border: '2px dashed var(--line)',
+                    borderRadius: '8px',
+                    padding: '1.25rem 1rem',
+                    background: 'var(--subtle)',
                     cursor: 'pointer',
-                    background: 'var(--surface)',
-                    gap: '0.35rem',
-                    fontSize: '0.78rem',
-                    color: 'var(--muted)',
+                    transition: 'border-color 0.15s ease',
                   }}
                 >
-                  <span>Attach Document Photo or PDF (Max 10MB)</span>
                   <input
                     type="file"
-                    accept="image/*,application/pdf"
+                    accept="image/*,.pdf"
                     onChange={handleFileChange}
                     style={{ display: 'none' }}
                   />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--blue)' }}>
+                    Upload Aadhaar / Rent Agreement
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: '0.2rem' }}>
+                    JPG, PNG, or PDF up to 10MB
+                  </span>
                 </label>
               ) : (
                 <div
@@ -374,23 +289,42 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: 'var(--surface)',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
                     border: '1px solid var(--line)',
-                    borderRadius: '6px',
-                    padding: '0.5rem 0.75rem',
+                    background: 'var(--surface)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
                     {documentPreview ? (
-                      <img src={documentPreview} alt="Proof preview" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <img
+                        src={documentPreview}
+                        alt="Preview"
+                        style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px' }}
+                      />
                     ) : (
-                      <span style={{ fontSize: '0.78rem', color: 'var(--ink)' }}>{documentFile.name}</span>
+                      <span style={{ fontSize: '1.4rem' }}>📄</span>
                     )}
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {documentFile.name}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                        {(documentFile.size / 1024 / 1024).toFixed(2)} MB
+                      </div>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={handleRemoveFile}
-                    style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--red)',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
                   >
                     Remove
                   </button>
@@ -399,23 +333,23 @@ export const GoogleOnboardingModal: React.FC<GoogleOnboardingModalProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
             <button
               type="button"
-              className="button secondary"
               onClick={onClose}
+              className="button secondary"
+              style={{ flex: 1 }}
               disabled={isSubmitting}
-              style={{ padding: '0.65rem 1.25rem' }}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="button primary"
+              style={{ flex: 2 }}
               disabled={isSubmitting}
-              style={{ padding: '0.65rem 1.25rem' }}
             >
-              {isSubmitting ? 'Verifying & Submitting...' : 'Complete Society Verification'}
+              {isSubmitting ? 'Saving Profile...' : 'Complete Registration'}
             </button>
           </div>
         </form>
