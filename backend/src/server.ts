@@ -58,7 +58,7 @@ app.get('/health', (_req, res) => {
 
 app.use(errorHandler);
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   startNotificationWorker(30000);
   startNoticeExpiryScheduler();
 
