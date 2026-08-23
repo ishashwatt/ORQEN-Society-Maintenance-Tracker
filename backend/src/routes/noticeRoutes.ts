@@ -5,6 +5,7 @@ import { query, inMemStore } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { authenticate, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { formatSmartTitle, formatSmartText } from '../services/textFormatterService';
+import { buildNoticeBroadcastEmail } from '../services/emailTemplateService';
 
 const router = Router();
 
@@ -152,19 +153,24 @@ router.post('/', authenticate, requireRole('ADMIN'), async (req: AuthenticatedRe
     const endStr = endTime ? endTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) : 'Ongoing Advisory';
     const durationStr = approxDuration ? ` (${approxDuration})` : '';
 
-    const subject = body.is_important
-      ? `Urgent Public Announcement — ${formattedTitle} [ORQEN Operations]`
-      : `Public Announcement: ${formattedTitle} — ORQEN Society Operations`;
-
     for (const r of residentList) {
       const notifId = uuidv4();
-      const emailBody = `Dear ${r.name} (Flat ${r.flat_number}),\n\nAn official public announcement has been issued by the Society Management Committee:\n\n• Subject: ${formattedTitle}\n• Urgency: ${body.is_important ? 'High Priority / Urgent' : 'General Notice'}\n• Approx. Schedule: ${startStr} to ${endStr}${durationStr}\n• Details:\n${formattedContent}\n\nPlease visit the ORQEN resident portal at http://localhost:3000 for live updates and details.\n\nRegards,\nSociety Management Committee\nORQEN Operations Desk`;
+      const emailData = buildNoticeBroadcastEmail({
+        title: formattedTitle,
+        content: formattedContent,
+        isImportant: body.is_important,
+        startFormatted: startStr,
+        endFormatted: endStr,
+        durationTag: approxDuration,
+        residentName: r.name,
+        flatNumber: r.flat_number,
+      });
 
       try {
         await query(
           `INSERT INTO notifications (id, recipient_id, recipient_email, subject, body, status, attempts)
            VALUES ($1, $2, $3, $4, $5, 'PENDING', 0)`,
-          [notifId, r.id || null, r.email, subject, emailBody]
+          [notifId, r.id || null, r.email, emailData.subject, emailData.text]
         );
       } catch (ne) {}
     }

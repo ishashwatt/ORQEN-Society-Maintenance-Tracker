@@ -10,6 +10,7 @@ import { authenticate, requireRole, AuthenticatedRequest } from '../middleware/a
 import { uploadPhoto, deleteFileIfExists } from '../services/photoStorage';
 import { sendEmail } from '../services/emailService';
 import { sendSms } from '../services/smsService';
+import { buildOtpEmail, buildResidentVerificationAdminEmail } from '../services/emailTemplateService';
 
 const router = Router();
 
@@ -85,17 +86,23 @@ router.post('/register', handleDocUpload, async (req, res, next) => {
     );
 
     const adminEmail = process.env.SMTP_USER || 'testingrequiredapp@gmail.com';
+    const emailData = buildResidentVerificationAdminEmail({
+      name: data.name,
+      flatNumber: data.flat_number,
+      email: data.email.toLowerCase(),
+      phone: data.phone,
+      occupancyType: data.occupancy_type,
+      documentType: data.document_type,
+    });
     const adminNotifId = uuidv4();
-    const adminSubject = `New Resident Flat Verification Required — Flat ${data.flat_number}`;
-    const adminBody = `Dear Society Committee,\n\nA new resident has registered and requested flat verification:\n• Name: ${data.name}\n• Flat Number: ${data.flat_number}\n• Email: ${data.email.toLowerCase()}\n• Phone: ${data.phone || 'N/A'}\n• Occupancy Status: ${data.occupancy_type || 'OWNER'}\n• Document: ${data.document_type || 'AADHAAR'}\n\nPlease review and approve the resident account on the Admin Verification Queue at http://localhost:3000.\n\nRegards,\nORQEN Operations Gateway`;
 
     await query(
       'INSERT INTO notifications (id, recipient_email, subject, body, status, attempts) VALUES ($1, $2, $3, $4, $5, $6)',
       [
         adminNotifId,
         adminEmail,
-        adminSubject,
-        adminBody,
+        emailData.subject,
+        emailData.text,
         'PENDING',
         0,
       ]
@@ -103,8 +110,9 @@ router.post('/register', handleDocUpload, async (req, res, next) => {
 
     sendEmail({
       to: adminEmail,
-      subject: adminSubject,
-      text: adminBody,
+      subject: emailData.subject,
+      text: emailData.text,
+      html: emailData.html,
     }).catch(() => {});
 
     const userPayload = {
@@ -150,6 +158,7 @@ router.post('/create-admin', authenticate, requireRole('ADMIN'), async (req: Aut
       [userId, data.name, data.email.toLowerCase(), passwordHash, 'ADMIN', 'ADMIN-OFFICE', true]
     );
 
+    const portalUrl = process.env.FRONTEND_URL || 'https://orqenthetracker.vercel.app';
     const notifId = uuidv4();
     await query(
       'INSERT INTO notifications (id, recipient_email, subject, body, status, attempts) VALUES ($1, $2, $3, $4, $5, $6)',
@@ -157,7 +166,7 @@ router.post('/create-admin', authenticate, requireRole('ADMIN'), async (req: Aut
         notifId,
         data.email.toLowerCase(),
         'Society Committee Administrator Account Provisioned — ORQEN',
-        `Dear ${data.name},\n\nYou have been appointed and provisioned as an Administrator in the Society Management Committee for ORQEN Operations.\n\nYour official login credentials:\n• Portal URL: http://localhost:3000\n• Username / Email: ${data.email.toLowerCase()}\n• Initial Password: ${data.password}\n\nPlease sign in to http://localhost:3000 to manage society maintenance queues, approve resident flats, and publish announcements.\n\nRegards,\nSociety Management Committee\nORQEN Operations Desk`,
+        `Dear ${data.name},\n\nYou have been appointed and provisioned as an Administrator in the Society Management Committee for ORQEN Operations.\n\nYour official login credentials:\n• Portal URL: ${portalUrl}\n• Username / Email: ${data.email.toLowerCase()}\n• Initial Password: ${data.password}\n\nPlease sign in to ${portalUrl} to manage society maintenance queues, approve resident flats, and publish announcements.\n\nRegards,\nSociety Management Committee\nORQEN Operations Desk`,
         'PENDING',
         0,
       ]
@@ -232,10 +241,12 @@ router.post('/otp/send', async (req, res, next) => {
 
     inMemStore.otpTokens.set(email.toLowerCase().trim(), { code: emailOtp, expires_at: expiresAt });
     
+    const emailData = buildOtpEmail(emailOtp, 'Registration');
     await sendEmail({
       to: email.toLowerCase().trim(),
-      subject: 'ORQEN Email Confirmation Code',
-      text: `Your ORQEN registration confirmation code is: ${emailOtp}\n\nThis code will expire in 10 minutes.\n\nRegards,\nORQEN Operations Gateway`,
+      subject: emailData.subject,
+      text: emailData.text,
+      html: emailData.html,
     });
 
     res.json({
@@ -285,10 +296,12 @@ router.post('/forgot-password', async (req, res, next) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     inMemStore.resetTokens.set(cleanEmail, { code: resetOtp, expires_at: expiresAt });
 
+    const emailData = buildOtpEmail(resetOtp, 'Password Reset');
     await sendEmail({
       to: cleanEmail,
-      subject: 'ORQEN Password Reset Verification Code',
-      text: `Dear Resident,\n\nYour password reset verification code is: ${resetOtp}\n\nThis code is valid for 10 minutes.\n\nRegards,\nORQEN Security Desk`,
+      subject: emailData.subject,
+      text: emailData.text,
+      html: emailData.html,
     });
 
     res.json({

@@ -42,6 +42,7 @@ export async function checkExpiredNotices(): Promise<void> {
         : 'Immediate';
       const endFormatted = new Date(notice.end_time).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
       const durationTag = notice.approx_duration || 'Scheduled Window';
+      const portalUrl = process.env.FRONTEND_URL || 'https://orqenthetracker.vercel.app';
 
       const subject = `Announcement Schedule Elapsed: ${notice.title} — ORQEN Operations`;
 
@@ -49,9 +50,8 @@ export async function checkExpiredNotices(): Promise<void> {
 
 Dear Administrator,
 
-The scheduled approximate time window for the public announcement titled "${notice.title}" has officially elapsed.
+The scheduled approximate window for the public announcement below has concluded and has been marked as EXPIRED:
 
-ANNOUNCEMENT DETAILS:
 • Subject: ${notice.title}
 • Urgency: ${notice.is_important ? 'High Priority / Urgent' : 'General Notice'}
 • Approx. Duration: ${durationTag}
@@ -61,7 +61,7 @@ ANNOUNCEMENT DETAILS:
 OPERATIONAL ACTION:
 This announcement has completed its active window and has been automatically archived from active resident dashboards. If ongoing society maintenance or advisory is still required, please log in to the ORQEN Admin Portal to extend the schedule or republish.
 
-Portal URL: http://localhost:3000
+Portal URL: ${portalUrl}
 
 Regards,
 Automated Operations Engine
@@ -109,7 +109,7 @@ ORQEN Society Management Desk`;
             </div>
 
             <div style="text-align: center; margin: 24px 0 12px;">
-              <a href="http://localhost:3000" style="display: inline-block; background-color: #1e4f78; color: #ffffff; text-decoration: none; padding: 10px 22px; border-radius: 6px; font-weight: 600; font-size: 14px;">Open Management Console</a>
+              <a href="${portalUrl}" style="display: inline-block; background-color: #1e4f78; color: #ffffff; text-decoration: none; padding: 10px 22px; border-radius: 6px; font-weight: 600; font-size: 14px;">Open Management Console</a>
             </div>
 
             <p style="font-size: 12px; color: #64748b; margin-bottom: 0; border-top: 1px solid #f1f5f9; padding-top: 14px;">

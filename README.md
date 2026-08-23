@@ -8,7 +8,7 @@
 
 > [!IMPORTANT]
 > **Primary Administrator Account (Ready to Sign In)**
-> - **Portal URL**: `http://localhost:3000`
+> - **Live Production Portal**: [https://orqenthetracker.vercel.app](https://orqenthetracker.vercel.app)
 > - **Email**: `testingrequiredapp@gmail.com`
 > - **Password**: `Password123!`
 > - **Role**: `Society Management Committee Administrator`
