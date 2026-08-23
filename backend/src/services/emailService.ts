@@ -39,6 +39,9 @@ function getTransporter(): nodemailer.Transporter | null {
           user,
           pass,
         },
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+        socketTimeout: 4000,
       });
     }
   }
@@ -48,30 +51,17 @@ function getTransporter(): nodemailer.Transporter | null {
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    const fromAddress = process.env.EMAIL_FROM || process.env.SMTP_USER || 'no-reply@orqen.com';
-    const emailTransporter = getTransporter();
-
-    if (emailTransporter) {
-      const info = await emailTransporter.sendMail({
-        from: fromAddress,
-        to: options.to,
-        subject: options.subject,
-        text: options.text,
-        html: options.html || options.text.replace(/\n/g, '<br/>'),
-      });
-      return { success: true, messageId: info.messageId };
-    }
-
     const resendApiKey = process.env.RESEND_API_KEY;
     if (resendApiKey) {
+      const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${resendApiKey}`,
+          Authorization: `Bearer ${resendApiKey.trim()}`,
         },
         body: JSON.stringify({
-          from: fromAddress,
+          from: fromAddress.includes('<') ? fromAddress : `ORQEN Society <${fromAddress}>`,
           to: [options.to],
           subject: options.subject,
           text: options.text,
@@ -82,11 +72,28 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
       if (response.ok) {
         const data = (await response.json()) as any;
         return { success: true, messageId: data.id };
+      } else {
+        const errText = await response.text();
+        console.error('[RESEND API ERROR]:', errText);
       }
+    }
+
+    const emailTransporter = getTransporter();
+    if (emailTransporter) {
+      const fromAddress = process.env.EMAIL_FROM || process.env.SMTP_USER || 'no-reply@orqen.com';
+      const info = await emailTransporter.sendMail({
+        from: fromAddress.includes('<') ? fromAddress : `ORQEN Operations <${fromAddress}>`,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html || options.text.replace(/\n/g, '<br/>'),
+      });
+      return { success: true, messageId: info.messageId };
     }
 
     return { success: true, messageId: 'mock-sent' };
   } catch (err: any) {
+    console.error('[EMAIL SEND ERROR]:', err.message);
     return { success: false, error: err.message };
   }
 }
