@@ -36,6 +36,16 @@ app.use('/notices', noticeRoutes);
 app.use('/analytics', analyticsRoutes);
 app.use('/notifications', notificationRoutes);
 
+app.get('/', (_req, res) => {
+  res.json({
+    status: 'ONLINE',
+    service: 'ORQEN Society Operations Gateway API',
+    version: '1.0.0',
+    portal: 'https://orqenthetracker.vercel.app',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'HEALTHY', timestamp: new Date().toISOString() });
 });
