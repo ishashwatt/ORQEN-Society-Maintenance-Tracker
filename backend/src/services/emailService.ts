@@ -29,6 +29,9 @@ function getTransporter(): nodemailer.Transporter | null {
         user,
         pass,
       },
+      connectionTimeout: 4000,
+      greetingTimeout: 4000,
+      socketTimeout: 4000,
     });
   }
 

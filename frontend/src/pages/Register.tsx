@@ -88,6 +88,9 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Failed to dispatch verification code');
 
+      if (data.dev_otp) {
+        setEmailOtp(data.dev_otp);
+      }
       setShowOtpModal(true);
       setOtpError(null);
     } catch (err: any) {

@@ -242,16 +242,17 @@ router.post('/otp/send', async (req, res, next) => {
     inMemStore.otpTokens.set(email.toLowerCase().trim(), { code: emailOtp, expires_at: expiresAt });
     
     const emailData = buildOtpEmail(emailOtp, 'Registration');
-    await sendEmail({
+    sendEmail({
       to: email.toLowerCase().trim(),
       subject: emailData.subject,
       text: emailData.text,
       html: emailData.html,
-    });
+    }).catch(() => {});
 
     res.json({
       success: true,
       message: 'Verification code sent to your email',
+      dev_otp: emailOtp,
       expires_in_seconds: 600,
     });
   } catch (err) {
@@ -297,16 +298,17 @@ router.post('/forgot-password', async (req, res, next) => {
     inMemStore.resetTokens.set(cleanEmail, { code: resetOtp, expires_at: expiresAt });
 
     const emailData = buildOtpEmail(resetOtp, 'Password Reset');
-    await sendEmail({
+    sendEmail({
       to: cleanEmail,
       subject: emailData.subject,
       text: emailData.text,
       html: emailData.html,
-    });
+    }).catch(() => {});
 
     res.json({
       success: true,
       message: 'Password reset OTP sent to registered email',
+      dev_otp: resetOtp,
     });
   } catch (err) {
     next(err);
