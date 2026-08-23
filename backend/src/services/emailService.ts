@@ -17,22 +17,30 @@ function getTransporter(): nodemailer.Transporter | null {
 
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const rawPass = process.env.SMTP_PASS;
+  const pass = rawPass ? rawPass.replace(/\s+/g, '') : undefined;
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
 
-  if (host && user && pass) {
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: {
-        user,
-        pass,
-      },
-      connectionTimeout: 4000,
-      greetingTimeout: 4000,
-      socketTimeout: 4000,
-    });
+  if (user && pass) {
+    if (host === 'smtp.gmail.com' || user.endsWith('@gmail.com')) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user,
+          pass,
+        },
+      });
+    } else if (host) {
+      transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: {
+          user,
+          pass,
+        },
+      });
+    }
   }
 
   return transporter;
@@ -79,6 +87,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
 
     return { success: true, messageId: 'mock-sent' };
   } catch (err: any) {
-    return { success: false, error: err.message || 'Email delivery failed' };
+    return { success: false, error: err.message };
   }
 }
