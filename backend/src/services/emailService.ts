@@ -36,7 +36,7 @@ export function getTransporter(): nodemailer.Transporter | null {
       tls: {
         rejectUnauthorized: false,
       },
-    });
+    } as any);
   }
 
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
@@ -49,7 +49,7 @@ export function getTransporter(): nodemailer.Transporter | null {
     connectionTimeout: 5000,
     greetingTimeout: 5000,
     socketTimeout: 5000,
-  });
+  } as any);
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
