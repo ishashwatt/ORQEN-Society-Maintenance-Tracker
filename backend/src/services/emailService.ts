@@ -18,7 +18,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
   }
 
   try {
-    const fromAddress = process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev';
+    const rawFrom = process.env.EMAIL_FROM?.trim();
+    const isPublicWebmail = !rawFrom || /@(gmail|yahoo|outlook|hotmail|icloud)\.com/i.test(rawFrom);
+    const fromAddress = isPublicWebmail ? 'onboarding@resend.dev' : rawFrom;
     const formattedFrom = fromAddress.includes('<') ? fromAddress : `ORQEN Operations <${fromAddress}>`;
 
     const response = await fetch('https://api.resend.com/emails', {
