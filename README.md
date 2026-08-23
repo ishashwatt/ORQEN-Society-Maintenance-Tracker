@@ -4,7 +4,7 @@
 
 ---
 
-## 🔑 Administrative Access & Demo Credentials
+## 🔑 Administrative Access & Evaluator Credentials
 
 > [!IMPORTANT]
 > **Primary Administrator Account (Ready to Sign In)**
@@ -45,7 +45,7 @@ flowchart TD
     end
 
     subgraph Persistence_Layer["🗄️ Database & Storage Layer"]
-        D1[("Neon PostgreSQL Database<br/>• users, complaints, categories<br/>• complaint_status_history<br/>• notices, notifications")]
+        D1[("PostgreSQL Database<br/>• users, complaints, categories<br/>• complaint_status_history<br/>• notices, notifications")]
         D2["Static Evidence Storage (/uploads proxy)"]
     end
 
@@ -110,7 +110,7 @@ stateDiagram-v2
 | :--- | :--- |
 | **Frontend** | React 18, Vite, TypeScript, Vanilla CSS Design System, Custom SVG Icons |
 | **Backend** | Node.js, Express, TypeScript, Zod, JWT, bcryptjs, Multer |
-| **Database** | Neon Cloud Serverless PostgreSQL (`pg` driver with in-memory resilient fallback) |
+| **Database** | PostgreSQL (`pg` driver with in-memory resilient fallback) |
 | **Notifications** | Nodemailer (Gmail SMTP) & Resend API with async background queuing |
 | **Testing** | Vitest, Supertest |
 
@@ -125,8 +125,8 @@ stateDiagram-v2
 ### 1. Clone & Install Dependencies
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ORQEN.git
-cd ORQEN
+git clone https://github.com/ishashwatt/ORQEN-Society-Maintenance-Tracker.git
+cd ORQEN-Society-Maintenance-Tracker
 
 # Install backend dependencies
 cd backend
@@ -142,15 +142,15 @@ Create a `.env` file in the `backend/` directory:
 
 ```env
 PORT=5000
-DATABASE_URL=postgresql://neondb_owner:npg_gY0lD9UedJjN@ep-soft-snow-a1y096v7-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-JWT_SECRET=orqen_super_secret_jwt_key_2026_production_grade
+DATABASE_URL=postgresql://username:password@localhost:5432/orqen_db
+JWT_SECRET=your_jwt_secret_key_here
 UPLOAD_DIR=./uploads
 
-# SMTP Configuration (Optional for real email dispatches)
+# SMTP Configuration (Optional for email dispatches)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=testingrequiredapp@gmail.com
-SMTP_PASS=your_app_specific_password
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
 ```
 
 ### 3. Launch Development Servers
@@ -175,14 +175,6 @@ The web application will be accessible at `http://localhost:3000` (proxied to AP
 | `npm run db:clean` | `backend/` | Safely purges test complaints, notices, notifications, and non-admin users for a fresh production demo |
 | `npm run build` | `backend/` | Compiles TypeScript backend into production JavaScript in `dist/` |
 | `npm run build` | `frontend/` | Bundles and optimizes frontend single-page application into `dist/` |
-
----
-
-## 🛡 Security & Design Standards
-- **Zero-Emoji Policy**: Pure typography, curated HSL color tokens, and geometric SVG icons.
-- **Strict Zero-Comments Rule**: 0 comments across all source code files for clean production readability.
-- **Backend Authoritative**: All validations, RBAC checks, and status mutations are enforced strictly on the server.
-- **Fully Responsive**: Optimized for desktop, laptop, tablet, and mobile browsers with touch-friendly tap targets ($\ge 44\text{px}$).
 
 ---
 
