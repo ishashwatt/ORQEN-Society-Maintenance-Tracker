@@ -21,6 +21,13 @@
 
 ---
 
+## 📐 System Design & Technical Documentation
+
+For the in-depth technical specifications, complete database Entity-Relationship Diagram (ERD), complaint lifecycle sequence flows, and mathematical SLA models, refer to:
+👉 **[Full System Design Specification (`docs/SYSTEM_DESIGN.md`)](docs/SYSTEM_DESIGN.md)**
+
+---
+
 ## 🏗 System Architecture & End-to-End Flow
 
 ```mermaid
