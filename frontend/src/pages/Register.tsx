@@ -460,7 +460,31 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
 
             <form onSubmit={handleFinalSubmitWithOtp} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
               <label>
-                Email Confirmation Code (6 Digits)
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Email Confirmation Code (6 Digits)</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        const clean = text.replace(/[^0-9]/g, '').slice(0, 6);
+                        if (clean) setEmailOtp(clean);
+                      } catch (e) {}
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--blue)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: '0 4px',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Paste from Clipboard
+                  </button>
+                </div>
                 <input
                   type="text"
                   required

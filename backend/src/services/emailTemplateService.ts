@@ -120,7 +120,16 @@ export function buildOtpEmail(code: string, purpose: string, expiresInMinutes = 
           ${digitBoxes}
         </tr>
       </table>
-      <div style="margin-top: 14px; font-size: 12px; color: #0369a1; font-weight: 600;">
+      
+      <!-- Quick Copy Code Block -->
+      <div style="margin-top: 18px;">
+        <div style="display: inline-block; background-color: #ffffff; border: 1px dashed #0284c7; border-radius: 8px; padding: 8px 18px;">
+          <span style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px;">Direct Copy Code:</span>
+          <span style="font-family: monospace; font-size: 20px; font-weight: 800; letter-spacing: 4px; color: #0369a1; user-select: all; -webkit-user-select: all; -moz-user-select: all; cursor: pointer;">${code}</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 12px; font-size: 12px; color: #0369a1; font-weight: 600;">
         Valid for the next ${expiresInMinutes} minutes &bull; Single use only
       </div>
     </div>
