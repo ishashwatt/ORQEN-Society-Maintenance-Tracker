@@ -252,7 +252,6 @@ router.post('/otp/send', async (req, res, next) => {
     res.json({
       success: true,
       message: 'Verification code sent to your email',
-      dev_otp: emailOtp,
       expires_in_seconds: 600,
     });
   } catch (err) {
@@ -308,7 +307,6 @@ router.post('/forgot-password', async (req, res, next) => {
     res.json({
       success: true,
       message: 'Password reset OTP sent to registered email',
-      dev_otp: resetOtp,
     });
   } catch (err) {
     next(err);
