@@ -24,6 +24,9 @@ export function getTransporter(): nodemailer.Transporter | null {
       port: 465,
       secure: true,
       auth: { user, pass },
+      connectionTimeout: 3000,
+      greetingTimeout: 3000,
+      socketTimeout: 3000,
       tls: {
         rejectUnauthorized: false,
       },
@@ -36,31 +39,49 @@ export function getTransporter(): nodemailer.Transporter | null {
     port,
     secure: port === 465,
     auth: { user, pass },
+    connectionTimeout: 3000,
+    greetingTimeout: 3000,
+    socketTimeout: 3000,
   });
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const emailTransporter = getTransporter();
-  if (emailTransporter && process.env.SMTP_USER) {
+  const brevoKey = process.env.BREVO_API_KEY?.trim();
+  if (brevoKey) {
     try {
-      const senderUser = process.env.SMTP_USER.trim();
-      const info = await emailTransporter.sendMail({
-        from: `"ORQEN Society" <${senderUser}>`,
-        to: options.to.trim(),
-        subject: options.subject,
-        text: options.text,
-        html: options.html || options.text.replace(/\n/g, '<br/>'),
+      const senderEmail = process.env.SMTP_USER || 'testingrequiredapp@gmail.com';
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': brevoKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: 'ORQEN Society', email: senderEmail },
+          to: [{ email: options.to.trim() }],
+          subject: options.subject,
+          htmlContent: options.html || options.text.replace(/\n/g, '<br/>'),
+          textContent: options.text,
+        }),
       });
-      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
-      return { success: true, messageId: info.messageId };
-    } catch (smtpErr: any) {
-      console.warn('[GMAIL SMTP RETRYING VIA FALLBACK]:', smtpErr.message);
+
+      if (response.ok) {
+        const data = (await response.json()) as any;
+        console.log(`[BREVO API SUCCESS] to ${options.to} messageId: ${data.messageId}`);
+        return { success: true, messageId: data.messageId };
+      } else {
+        const errText = await response.text();
+        console.error('[BREVO API ERROR]:', errText);
+      }
+    } catch (e: any) {
+      console.error('[BREVO ERROR]:', e.message);
     }
   }
 
-  try {
-    const resendApiKey = process.env.RESEND_API_KEY?.trim();
-    if (resendApiKey) {
+  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+  if (resendApiKey) {
+    try {
       const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -83,13 +104,30 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
         return { success: true, messageId: data.id };
       } else {
         const errText = await response.text();
-        console.error('[RESEND API ERROR]:', errText);
+        console.warn('[RESEND API NOTICE]:', errText);
       }
+    } catch (e: any) {
+      console.warn('[RESEND ERROR]:', e.message);
     }
-
-    return { success: true, messageId: 'mock-sent' };
-  } catch (err: any) {
-    console.error('[EMAIL SEND FAILED]:', err.message || err);
-    return { success: false, error: err.message };
   }
+
+  const emailTransporter = getTransporter();
+  if (emailTransporter && process.env.SMTP_USER) {
+    try {
+      const senderUser = process.env.SMTP_USER.trim();
+      const info = await emailTransporter.sendMail({
+        from: `"ORQEN Society" <${senderUser}>`,
+        to: options.to.trim(),
+        subject: options.subject,
+        text: options.text,
+        html: options.html || options.text.replace(/\n/g, '<br/>'),
+      });
+      console.log(`[GMAIL SMTP SUCCESS] to ${options.to} messageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (smtpErr: any) {
+      console.warn('[GMAIL SMTP FAILED (Likely Port Blocked by Cloud Host)]:', smtpErr.message);
+    }
+  }
+
+  return { success: false, error: 'All email transports exhausted' };
 }
