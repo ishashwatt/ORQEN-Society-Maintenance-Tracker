@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14344d"/>
+      <stop offset="100%" stop-color="#0a1d2e"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#aa820a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bgGrad)"/>
+  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-opacity="0.3"/>
+
+  <!-- Stylized Geometric Architecture Monogram -->
+  <path d="M32 10 L48 20 L48 44 L32 54 L16 44 L16 20 Z" fill="none" stroke="url(#goldGrad)" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M32 10 L32 54" fill="none" stroke="#d4af37" stroke-width="2" stroke-opacity="0.6"/>
+  <path d="M16 20 L48 44" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-opacity="0.4"/>
+  <path d="M48 20 L16 44" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-opacity="0.4"/>
+  <circle cx="32" cy="32" r="5" fill="#ffffff"/>
+</svg>
