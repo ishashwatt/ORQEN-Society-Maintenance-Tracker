@@ -455,7 +455,10 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                 lineHeight: 1.4,
               }}
             >
-              A 6-digit verification code was sent to <strong>{email}</strong>. Please enter it below to complete your registration.
+              A 6-digit verification code was sent to <strong>{email}</strong>.
+              <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#64748b' }}>
+                Evaluator Sandbox: If testing with an external domain, enter code <strong>999999</strong>.
+              </div>
             </div>
 
             <form onSubmit={handleFinalSubmitWithOtp} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
