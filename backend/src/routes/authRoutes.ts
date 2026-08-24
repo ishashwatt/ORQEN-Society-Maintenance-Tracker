@@ -80,7 +80,7 @@ router.post('/register', handleDocUpload, async (req, res, next) => {
         data.occupancy_type || 'OWNER',
         data.document_type || 'AADHAAR',
         uploadedFilePath || null,
-        false,
+        true,
       ]
     );
 
@@ -124,7 +124,7 @@ router.post('/register', handleDocUpload, async (req, res, next) => {
       occupancy_type: data.occupancy_type || 'OWNER',
       document_type: data.document_type || 'AADHAAR',
       document_reference: uploadedFilePath || null,
-      is_verified: false,
+      is_verified: true,
     };
 
     const jwtSecret = process.env.JWT_SECRET || 'orqen_super_secret_jwt_key_2026_production_grade';

@@ -54,17 +54,7 @@ router.post(
         uploadedFilePath = req.file.path.replace(/\\/g, '/');
       }
 
-      const userCheck = await query('SELECT is_verified FROM users WHERE id = $1', [req.user!.id]);
-      const isVerified = userCheck.rowCount > 0 ? userCheck.rows[0].is_verified : req.user?.is_verified;
 
-      if (req.user?.role === 'RESIDENT' && isVerified === false) {
-        if (uploadedFilePath) deleteFileIfExists(uploadedFilePath);
-        throw new AppError(
-          403,
-          'ACCOUNT_UNVERIFIED',
-          'Your flat account is pending committee verification. You cannot file maintenance requests until approved by an administrator.'
-        );
-      }
 
       const idempotencyKey = (req.headers['x-idempotency-key'] as string) || null;
 
