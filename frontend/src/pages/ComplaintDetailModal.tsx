@@ -4,6 +4,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Timeline, HistoryItem } from '../components/Timeline';
 import { RecurrenceAlert } from '../components/RecurrenceAlert';
 import { CustomSelect, SelectOption } from '../components/CustomSelect';
+import { parseComplaintContent } from '../utils/complaintParser';
 
 interface ComplaintDetailModalProps {
   complaintId: string;
@@ -167,27 +168,36 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
               />
             )}
 
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '6px', padding: '1.25rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <span className="category-cell">
-                  {complaint.category_name}
-                </span>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <StatusBadge status={complaint.current_status} isOverdue={complaint.is_overdue} />
-                  <span className={`priority-tag ${complaint.priority.toLowerCase()}`}>{complaint.priority} PRIORITY</span>
-                </div>
-              </div>
+            {(() => {
+              const parsed = parseComplaintContent(complaint.description, complaint.category_name);
+              return (
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '8px', padding: '1.35rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+                    <span className="category-cell" style={{ fontSize: '0.82rem', fontWeight: 700, padding: '0.35rem 0.75rem', borderRadius: '6px' }}>
+                      {parsed.categoryName}
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <StatusBadge status={complaint.current_status} isOverdue={complaint.is_overdue} />
+                      <span className={`priority-tag ${complaint.priority.toLowerCase()}`}>{complaint.priority} PRIORITY</span>
+                    </div>
+                  </div>
 
-              <p style={{ fontSize: '1rem', color: 'var(--ink)', margin: '0.75rem 0 1.25rem 0', lineHeight: 1.6, fontWeight: 500 }}>
-                {complaint.description}
-              </p>
+                  <h3 style={{ fontSize: '1.18rem', fontWeight: 700, color: 'var(--ink)', margin: '0.35rem 0 0.5rem 0', lineHeight: 1.4 }}>
+                    {parsed.title}
+                  </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.84rem', color: 'var(--muted)', borderTop: '1px solid var(--line)', paddingTop: '0.85rem' }}>
-                <div>Flat Number: <strong style={{ color: 'var(--ink)' }}>{complaint.flat_number}</strong></div>
-                <div>Submitted On: <strong style={{ color: 'var(--ink)' }}>{new Date(complaint.created_at).toLocaleDateString()}</strong></div>
-                <div>SLA Target: <strong style={{ color: complaint.is_overdue ? 'var(--red)' : 'var(--green)' }}>{new Date(complaint.due_at).toLocaleString()}</strong></div>
-                <div>Resolved On: <strong style={{ color: 'var(--ink)' }}>{complaint.resolved_at ? new Date(complaint.resolved_at).toLocaleString() : 'Pending'}</strong></div>
-              </div>
+                  {parsed.description && parsed.description !== parsed.title && (
+                    <p style={{ fontSize: '0.92rem', color: 'var(--muted)', margin: '0 0 1.25rem 0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                      {parsed.description}
+                    </p>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.84rem', color: 'var(--muted)', borderTop: '1px solid var(--line)', paddingTop: '0.85rem' }}>
+                    <div>Flat Number: <strong style={{ color: 'var(--ink)' }}>{complaint.flat_number}</strong></div>
+                    <div>Submitted On: <strong style={{ color: 'var(--ink)' }}>{new Date(complaint.created_at).toLocaleDateString()}</strong></div>
+                    <div>SLA Target: <strong style={{ color: complaint.is_overdue ? 'var(--red)' : 'var(--green)' }}>{new Date(complaint.due_at).toLocaleString()}</strong></div>
+                    <div>Resolved On: <strong style={{ color: 'var(--ink)' }}>{complaint.resolved_at ? new Date(complaint.resolved_at).toLocaleString() : 'Pending'}</strong></div>
+                  </div>
 
               <div style={{ marginTop: '1rem', borderTop: '1px solid var(--line)', paddingTop: '0.85rem' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: '0.45rem' }}>
@@ -249,6 +259,8 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
                 })()}
               </div>
             </div>
+          );
+        })()}
 
             {user?.role === 'ADMIN' && complaint.current_status !== 'RESOLVED' && (
               <div style={{ background: 'rgba(30, 79, 120, 0.04)', border: '1px solid rgba(30, 79, 120, 0.2)', borderRadius: '6px', padding: '1.25rem', marginBottom: '1.5rem' }}>

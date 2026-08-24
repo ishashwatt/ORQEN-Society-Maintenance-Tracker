@@ -6,6 +6,7 @@ import { ComplaintDetailModal } from './ComplaintDetailModal';
 import { AddAdminModal } from './AddAdminModal';
 import { CustomSelect, SelectOption } from '../components/CustomSelect';
 import { NoticeBanner } from '../components/NoticeBanner';
+import { parseComplaintContent } from '../utils/complaintParser';
 
 interface AdminDashboardProps {
   activeTab?: 'dashboard' | 'complaints' | 'residents' | 'notices';
@@ -484,40 +485,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeTab = 'das
           <div className="empty-state">No complaints matching the selected filter criteria.</div>
         ) : (
           <div className="complaint-cards-grid">
-            {filteredComplaints.map((item) => (
-              <div
-                key={item.id}
-                className={`complaint-card ${item.is_overdue && item.current_status !== 'RESOLVED' ? 'overdue-card' : ''}`}
-                data-testid={`complaint-card-${item.id}`}
-                onClick={() => setSelectedComplaintId(item.id)}
-              >
-                <div className="card-top-row">
-                  <div className="badge-group">
-                    <span className="flat-badge">Flat {item.flat_number}</span>
-                    <span className="category-tag">{item.category_name}</span>
-                    <span className={`priority-tag ${item.priority.toLowerCase()}`}>
-                      {item.priority}
-                    </span>
+            {filteredComplaints.map((item) => {
+              const parsed = parseComplaintContent(item.description, item.category_name);
+              return (
+                <div
+                  key={item.id}
+                  className={`complaint-card ${item.is_overdue && item.current_status !== 'RESOLVED' ? 'overdue-card' : ''}`}
+                  data-testid={`complaint-card-${item.id}`}
+                  onClick={() => setSelectedComplaintId(item.id)}
+                >
+                  <div className="card-top-row">
+                    <div className="badge-group">
+                      <span className="flat-badge">Flat {item.flat_number}</span>
+                      <span className="category-tag">{parsed.categoryName}</span>
+                      <span className={`priority-tag ${item.priority.toLowerCase()}`}>
+                        {item.priority}
+                      </span>
+                    </div>
+                    <StatusBadge status={item.current_status} isOverdue={item.is_overdue} />
                   </div>
-                  <StatusBadge status={item.current_status} isOverdue={item.is_overdue} />
-                </div>
 
-                <h3 className="card-description">
-                  {item.description}
-                </h3>
+                  <h3 className="card-description" style={{ margin: '0.45rem 0 0.25rem 0', fontWeight: 700, fontSize: '0.96rem', color: 'var(--ink)' }}>
+                    {parsed.title}
+                  </h3>
+                  {parsed.description && parsed.description !== parsed.title && (
+                    <p style={{ fontSize: '0.82rem', color: 'var(--muted)', margin: '0 0 0.85rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {parsed.description}
+                    </p>
+                  )}
 
-                <div className="card-bottom-row">
-                  <div className="timestamp-info">
-                    <span>Created {new Date(item.created_at).toLocaleDateString()}</span>
-                    <span className="bullet-sep">•</span>
-                    <span style={{ color: item.is_overdue && item.current_status !== 'RESOLVED' ? 'var(--red)' : 'inherit' }}>
-                      Due: {new Date(item.due_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  <div className="card-bottom-row">
+                    <div className="timestamp-info">
+                      <span>Created {new Date(item.created_at).toLocaleDateString()}</span>
+                      <span className="bullet-sep">•</span>
+                      <span style={{ color: item.is_overdue && item.current_status !== 'RESOLVED' ? 'var(--red)' : 'inherit' }}>
+                        Due: {new Date(item.due_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <span className="card-action-link">View Record →</span>
                   </div>
-                  <span className="card-action-link">View Record →</span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

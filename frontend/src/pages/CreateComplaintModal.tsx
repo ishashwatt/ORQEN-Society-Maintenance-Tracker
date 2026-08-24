@@ -17,6 +17,7 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
   const [categories, setCategories] = useState<any[]>([]);
   const [categoryId, setCategoryId] = useState(initialCategoryId || '');
   const [customCategoryName, setCustomCategoryName] = useState('');
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('MEDIUM');
   const [photo, setPhoto] = useState<File | null>(null);
@@ -74,8 +75,13 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
       return;
     }
 
-    if (description.trim().length < 10) {
-      setError('Description must be at least 10 characters long');
+    if (!title.trim()) {
+      setError('Please enter a brief headline or title for the issue');
+      return;
+    }
+
+    if (description.trim().length < 5) {
+      setError('Please provide at least a few words describing the issue');
       return;
     }
 
@@ -83,19 +89,29 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
 
     try {
       let finalCategoryId = categoryId;
-      let finalDescription = description;
+      let selectedCatObj = categories.find((c) => c.id === categoryId);
 
       if (categoryId === 'OTHER_CUSTOM') {
-        const otherCat = categories.find(
-          (c) => c.name.toLowerCase().includes('other') || c.name.toLowerCase().includes('custom')
-        ) || categories[0];
+        const otherCat =
+          categories.find(
+            (c) =>
+              c.name.toLowerCase().includes('other') ||
+              c.name.toLowerCase().includes('custom')
+          ) || categories[0];
         finalCategoryId = otherCat ? otherCat.id : categories[0]?.id;
-        finalDescription = `[Category: ${customCategoryName.trim()}]\n${description.trim()}`;
       }
+
+      const activeCategoryName =
+        categoryId === 'OTHER_CUSTOM'
+          ? customCategoryName.trim()
+          : selectedCatObj?.name || 'General';
+
+      // Build clean structured payload
+      const combinedPayload = `[Category: ${activeCategoryName}]\n[Title: ${title.trim()}]\n\n${description.trim()}`;
 
       const formData = new FormData();
       formData.append('category_id', finalCategoryId);
-      formData.append('description', finalDescription);
+      formData.append('description', combinedPayload);
       formData.append('priority', priority);
       if (photo) {
         formData.append('photo', photo);
@@ -164,7 +180,7 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.45rem' }}>
               Maintenance Category
@@ -180,53 +196,15 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
               <div style={{ marginTop: '0.85rem', background: 'rgba(30, 79, 120, 0.04)', border: '1px solid var(--line)', borderRadius: '6px', padding: '0.85rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                   <label style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--blue)', margin: 0 }}>
-                    Write Your Custom Issue / Category Name
+                    Write Your Custom Category Name
                   </label>
-                  {customCategoryName.trim().length > 3 && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const res = await fetch('/api/complaints/format-text', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              Authorization: `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({ text: customCategoryName, is_title: true }),
-                          });
-                          const d = await res.json();
-                          if (d.formatted) setCustomCategoryName(d.formatted);
-                        } catch (e) {}
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--blue)',
-                        fontSize: '0.76rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.15rem 0.4rem',
-                        borderRadius: '4px',
-                      }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 20h9"></path>
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                      </svg>
-                      Auto-Format
-                    </button>
-                  )}
                 </div>
                 <input
                   type="text"
                   required
                   value={customCategoryName}
                   onChange={(e) => setCustomCategoryName(e.target.value)}
-                  placeholder="e.g. Balcony pigeon netting, Intercom line distortion, Main door latch repair..."
+                  placeholder="e.g. Elevator / Lift, Intercom Line, Main Gate Sensor..."
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
@@ -245,7 +223,71 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
               <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
-                Issue Description
+                Issue Title / Headline
+              </label>
+              {title.trim().length > 3 && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/complaints/format-text', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({ text: title, is_title: true }),
+                      });
+                      const d = await res.json();
+                      if (d.formatted) setTitle(d.formatted);
+                    } catch (e) {}
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--blue)',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.15rem 0.4rem',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                  </svg>
+                  Auto-Format Title
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Passenger Lift 2 jerking and stopping between 4th and 5th floors"
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '0.7rem 0.85rem',
+                border: '1px solid var(--line)',
+                borderRadius: '6px',
+                background: 'var(--surface)',
+                color: 'var(--ink)',
+                fontSize: '0.92rem',
+                fontWeight: 600,
+              }}
+            />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
+                Detailed Description / Symptoms
               </label>
               {description.trim().length > 3 && (
                 <button
@@ -291,15 +333,16 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the issue, location, or symptoms clearly (e.g. leaking flush valve in master bathroom)..."
+              placeholder="Provide more details, exact flat or tower location, technician urgency, etc..."
               style={{
                 width: '100%',
-                padding: '0.85rem',
+                boxSizing: 'border-box',
+                padding: '0.75rem 0.85rem',
                 border: '1px solid var(--line)',
                 borderRadius: '6px',
                 background: 'var(--surface)',
                 color: 'var(--ink)',
-                fontSize: '0.9rem',
+                fontSize: '0.88rem',
                 lineHeight: 1.5,
               }}
             />
@@ -360,25 +403,22 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
                     <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       {photo?.name}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
-                      {((photo?.size || 0) / (1024 * 1024)).toFixed(2)} MB
-                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--red)',
+                        fontSize: '0.72rem',
+                        padding: 0,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRemovePhoto}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--red)',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      padding: '0.3rem',
-                    }}
-                  >
-                    Remove
-                  </button>
                 </div>
               )}
             </div>
@@ -398,7 +438,7 @@ export const CreateComplaintModal: React.FC<CreateComplaintModalProps> = ({
               className="button primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Submitting Issue...' : 'Submit Issue'}
+              {isSubmitting ? 'Submitting Request...' : 'Submit Maintenance Request'}
             </button>
           </div>
         </form>

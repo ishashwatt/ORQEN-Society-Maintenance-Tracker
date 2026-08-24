@@ -4,6 +4,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { CreateComplaintModal } from './CreateComplaintModal';
 import { ComplaintDetailModal } from './ComplaintDetailModal';
 import { NoticeBanner } from '../components/NoticeBanner';
+import { parseComplaintContent } from '../utils/complaintParser';
 
 interface ResidentDashboardProps {
   activeTab?: 'dashboard' | 'complaints' | 'residents' | 'notices';
@@ -436,7 +437,15 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({ activeTab 
                     <span className="ticket-id-tag">#{activeSpotlight.id.substring(0, 8)}</span>
                     <span className="ticket-flat-tag">Flat {activeSpotlight.flat_number}</span>
                   </div>
-                  <p className="ticket-banner-desc">{activeSpotlight.description}</p>
+                  {(() => {
+                    const spotlightParsed = parseComplaintContent(activeSpotlight.description, activeSpotlight.category_name);
+                    return (
+                      <p className="ticket-banner-desc">
+                        <strong>{spotlightParsed.title}</strong>
+                        {spotlightParsed.description !== spotlightParsed.title ? ` — ${spotlightParsed.description}` : ''}
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="ticket-banner-right">
@@ -538,34 +547,43 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({ activeTab 
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => setSelectedComplaintId(item.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td>
-                      <span className="category-tag">{item.category_name || 'General'}</span>
-                    </td>
-                    <td>
-                      <div className="complaint-desc-cell">
-                        <span className="desc-text">{item.description}</span>
-                        {item.photo_url && (
-                          <span className="photo-indicator" title="Photo attached">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                              <circle cx="12" cy="13" r="4"></circle>
-                            </svg>
-                            Photo
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`priority-tag ${item.priority.toLowerCase()}`}>
-                        {item.priority}
-                      </span>
-                    </td>
+                {filtered.map((item) => {
+                  const parsed = parseComplaintContent(item.description, item.category_name);
+                  return (
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedComplaintId(item.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td>
+                        <span className="category-tag">{parsed.categoryName}</span>
+                      </td>
+                      <td>
+                        <div className="complaint-desc-cell">
+                          <strong style={{ fontSize: '0.88rem', color: 'var(--ink)', display: 'block', marginBottom: '0.15rem' }}>
+                            {parsed.title}
+                          </strong>
+                          {parsed.description && parsed.description !== parsed.title && (
+                            <span className="desc-text" style={{ fontSize: '0.78rem', color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {parsed.description}
+                            </span>
+                          )}
+                          {item.photo_url && (
+                            <span className="photo-indicator" title="Photo attached" style={{ marginTop: '0.25rem' }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                              </svg>
+                              Photo Evidence
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`priority-tag ${item.priority.toLowerCase()}`}>
+                          {item.priority}
+                        </span>
+                      </td>
                     <td>
                       <StatusBadge status={item.current_status} isOverdue={item.is_overdue} />
                     </td>
@@ -591,7 +609,8 @@ export const ResidentDashboard: React.FC<ResidentDashboardProps> = ({ activeTab 
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
